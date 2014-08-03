@@ -1,0 +1,12 @@
+{
+    // Style for inserted citations
+    //
+    // * "pandoc": format as [@my_citation]
+    // * "latex": format as \citep{my_citation}
+    "reference_style": "pandoc",
+
+    // Path to global BibTeX file
+    //
+    // Can be overridden on a per-project basis by specifying "bibtex_file" in the project settings
+    "bibtex_file": ""
+}

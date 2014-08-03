@@ -1,0 +1,5 @@
+[
+    {
+        "keys": ["f10"], "command": "cite_bibtex_show_selector"
+    }
+]
