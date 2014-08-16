@@ -1,12 +1,39 @@
 {
-    // Style for inserted citations
-    //
-    // * "pandoc": format as [@my_citation]
-    // * "latex": format as \citep{my_citation}
-    "reference_style": "pandoc",
-
     // Path to global BibTeX file
-    //
-    // Can be overridden on a per-project basis by specifying "bibtex_file" in the project settings
-    "bibtex_file": ""
+    // (can be overridden on a per-project basis)
+
+    "bibtex_file": "",
+
+    // Default citation style to use
+    // Also used as a fallback when auto-detection is enabled but fails
+    // (can be overridden on a per-project basis)
+
+    "default_citation_style": "pandoc",
+
+    // Auto-detect citation style based on a file's syntax?
+    // (can be overridden on a per-project basis)
+
+    "autodetect_citation_style": true,
+
+    // !!
+    // The remainder of the settings below
+    // cannot be overridden on a per-project basis
+    // !!
+
+    // How to match citation style to syntax when using auto-detection
+
+    "autodetect_syntaxes": {"LaTeX": "latex",
+                            "LaTeX Beamer": "latex",
+                            "LaTeX Memoir": "latex",
+                            "Markdown": "pandoc",
+                            "MultiMarkdown": "pandoc",
+                            "Markdown GFM": "pandoc",
+                            "AcademicMarkdown": "pandoc"},
+
+    // Citation style definitions
+    // "$CITATION" will be replaced by the actual citation key
+    // Backslash needs to be escaped
+
+    "styles": {"pandoc": "[@$CITATION]",
+               "latex": "\\citep{$CITATION}"}
 }

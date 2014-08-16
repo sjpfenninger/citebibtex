@@ -1,0 +1,5 @@
+[
+    { "caption": "CiteBibTeX: Extract citations in current file",
+      "command": "extract_citations"
+    }
+]

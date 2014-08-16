@@ -4,6 +4,7 @@ import sublime_plugin
 import os
 
 from .lib.bib import Bibparser
+from .lib import md2bib
 
 
 def get_item(i):
@@ -51,12 +52,48 @@ class CiteBibtex(object):
         _ = self.check_modified(global_file)
         self.update_refs(global_file)
 
+    def get_setting(self, setting, return_source=False):
+        project_data = sublime.active_window().project_data()
+        # Check whether there is a project-specific override
+        if setting in project_data:
+            result = project_data[setting]
+            source = 'project'
+        else:
+            result = self.plugin_settings.get(setting)
+            source = 'global'
+        if return_source:
+            return (result, source)
+        else:
+            return result
+
+    def get_citation_style(self):
+        autodetect_syntaxes = self.plugin_settings.get('autodetect_syntaxes')
+        view = sublime.active_window().active_view()
+        current_syntax = view.settings().get('syntax')
+        current_syntax = os.path.splitext(os.path.basename(current_syntax))[0]
+        if (self.get_setting('autodetect_citation_style') and
+                current_syntax in autodetect_syntaxes):
+            style = autodetect_syntaxes[current_syntax]
+        else:
+            style = self.get_setting('default_citation_style')
+
+        strings = self.plugin_settings.get('styles')
+
+        try:
+            citation_string = strings[style]
+        except KeyError:
+            error_message = 'Unknown citation style: {}'.format(style)
+            sublime.status_message(error_message)
+            raise KeyError(error_message)
+        return citation_string
+
     def check_modified(self, ref_file):
         try:
             modified = os.path.getmtime(ref_file)
         except FileNotFoundError:
             error_message = 'ERROR: Can\'t open BibTeX file '
             sublime.status_message(error_message + ref_file)
+            raise FileNotFoundError(error_message)
         if ref_file not in self.last_modified:  # Initialize if needed
             self.last_modified[ref_file] = modified
             return True  # Upate needed if this file was never seen before
@@ -76,14 +113,13 @@ class CiteBibtex(object):
 
     def show_selector(self):
         window = sublime.active_window()
-        # Check whether there is a project-specific override, and if yes,
-        # load the project-specific BibTeX file
-        project_data = window.project_data()
-        if 'bibtex_file' in project_data:
+
+        ref_source, source = self.get_setting('bibtex_file',
+                                              return_source=True)
+        if source == 'project' and not os.path.isabs(ref_source):
             ref_dir = os.path.dirname(window.project_file_name())
-            ref_source = os.path.join(ref_dir, project_data['bibtex_file'])
-        else:
-            ref_source = self.plugin_settings.get('bibtex_file')
+            ref_source = os.path.join(ref_dir, ref_source)
+
         # Before showing selector, check whether BibTeX file was modified
         # and update it if needed
         if self.check_modified(ref_source):
@@ -96,12 +132,27 @@ class CiteBibtex(object):
         if refid == -1:  # Don't do anything if nothing was selected
             return None
         ref = references[refid][0]
-        if self.plugin_settings.get('reference_style') == 'pandoc':
-            ref = '[@' + ref + ']'
-        elif self.plugin_settings.get('reference_style') == 'latex':
-            ref = '\citep{' + ref + '}'
+        citation = self.get_citation_style().replace('$CITATION', ref)
         view = sublime.active_window().active_view()
-        view.run_command('insert_reference', {'reference': ref})
+        view.run_command('insert_reference', {'reference': citation})
+
+    def extract_citations(self):
+        """
+        Extracts those citations from the global BibTeX file
+        that are cited in the currently active file, and saves them
+        to a BibTeX file alongside the currently active file.
+
+        """
+        current_file = sublime.active_window().active_view().file_name()
+        # split off extension
+        basefile, extension = os.path.splitext(current_file)
+        bibsubset_file = basefile + '.bib'
+        bibtex_file = self.plugin_settings.get('bibtex_file')
+        md2bib.extract_bibliography(current_file, bibtex_file,
+                                    bibsubset_file,
+                                    include_bibtex_style=True)
+        _, fname = os.path.split(bibsubset_file)
+        sublime.status_message('Extracted citations to {}'.format(fname))
 
 
 class CiteBibtexShowSelectorCommand(sublime_plugin.ApplicationCommand):
@@ -114,6 +165,11 @@ class InsertReferenceCommand(sublime_plugin.TextCommand):
         # Only using the first cursor no matter how many there are
         cursor_pos = self.view.sel()[0].begin()
         self.view.insert(edit, cursor_pos, reference)
+
+
+class ExtractCitationsCommand(sublime_plugin.ApplicationCommand):
+    def run(self, **kwargs):
+        _sublimebibtex.extract_citations()
 
 
 def plugin_loaded():
