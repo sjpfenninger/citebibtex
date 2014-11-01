@@ -55,7 +55,7 @@ class CiteBibtex(object):
     def get_setting(self, setting, return_source=False):
         project_data = sublime.active_window().project_data()
         # Check whether there is a project-specific override
-        if setting in project_data:
+        if project_data and setting in project_data:
             result = project_data[setting]
             source = 'project'
         else:
