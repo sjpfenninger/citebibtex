@@ -4,6 +4,12 @@
 
     "bibtex_file": "",
 
+    // Encoding of the BibTeX file
+    // It should not normally be necessary to change this
+    // (can be overridden on a per-project basis)
+
+    "bibtex_file_encoding": "utf-8",
+
     // Default citation style to use
     // Also used as a fallback when auto-detection is enabled but fails
     // (can be overridden on a per-project basis)

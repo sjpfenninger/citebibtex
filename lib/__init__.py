@@ -1,1 +1,1 @@
-from . import bib
+from . import bibtexparser

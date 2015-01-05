@@ -3,25 +3,34 @@ import sublime_plugin
 
 import os
 
-from .lib.bib import Bibparser
+from .lib.bibtexparser.bparser import BibTexParser
+from .lib.bibtexparser import customization
 from .lib import md2bib
 
 
 def get_item(i):
+    # Year
     try:
-        year = i['issued']['literal']
+        year = i['year']
     except KeyError:
         year = '<no date>'
+
+    # Authors
     try:
         authors = i['author']
-        authors = ', '.join(a['family'] for a in authors)
+        # authors is a list of 'last, first' strings, we only want
+        # the last names here
+        authors = ', '.join([a.split(',',)[0] for a in authors])
     except KeyError:
         authors = '<no authors>'
+
+    # Title
     try:
         title = i['title']
     except KeyError:
         title = ''
-    # Publication is a bit more complex
+
+    # Publication
     if 'journal' in i:
         publication = i['journal']
         if 'volume' in i:
@@ -32,8 +41,9 @@ def get_item(i):
         try:
             publication = i['booktitle']
         except KeyError:
-            publication = i['type'].capitalize()
-    return [i['id'], year + ' | ' + authors, title, publication]
+            publication = i['ENTRYTYPE'].capitalize()
+
+    return [i['ID'], year + ' | ' + authors, title, publication]
 
 
 class CiteBibtex(object):
@@ -93,7 +103,7 @@ class CiteBibtex(object):
         except FileNotFoundError:
             error_message = 'ERROR: Can\'t open BibTeX file '
             sublime.status_message(error_message + ref_file)
-            raise FileNotFoundError(error_message)
+            raise
         if ref_file not in self.last_modified:  # Initialize if needed
             self.last_modified[ref_file] = modified
             return True  # Upate needed if this file was never seen before
@@ -105,10 +115,16 @@ class CiteBibtex(object):
                 return False
 
     def update_refs(self, ref_file):
-        with open(ref_file, 'r') as f:
-            bib = Bibparser(f.read())
-        bib.parse()
-        refs = bib.records
+        encoding = self.get_setting('bibtex_file_encoding')
+        parser = BibTexParser()
+        parser.ignore_nonstandard_types = False
+        def customizer(record):
+            record = customization.author(record)
+            return record
+        parser.customization = customizer
+        with open(ref_file, 'r', encoding=encoding) as f:
+            bib = parser.parse_file(f)
+        refs = bib.entries_dict
         self.refs[ref_file] = [get_item(refs[i]) for i in refs]
 
     def show_selector(self):
@@ -128,11 +144,11 @@ class CiteBibtex(object):
         window.show_quick_panel(self.refs[ref_source], self.insert_ref)
 
     def insert_ref(self, refid):
-        references = self.refs[self.current_ref_source]
         if refid == -1:  # Don't do anything if nothing was selected
             return None
-        ref = references[refid][0]
-        citation = self.get_citation_style().replace('$CITATION', ref)
+        references = self.refs[self.current_ref_source]
+        ref_key = references[refid][0]
+        citation = self.get_citation_style().replace('$CITATION', ref_key)
         view = sublime.active_window().active_view()
         view.run_command('insert_reference', {'reference': citation})
 
