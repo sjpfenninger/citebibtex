@@ -41,7 +41,7 @@ For example, if `my_paper.md` is currently open and cites 10 out of 100 referenc
 
 ## Acknowledgments
 
-Includes `Bibparser` from [bibpy](https://github.com/ptigas/bibpy) by Panagiotis Tigkas (MIT-licensed).
+Includes the BibTeX parsing library [python-bibtexparser](https://github.com/sciunto-org/python-bibtexparser) (LGPLv3-licensed).
 
 Includes `md2bib.py` from [pandoc-wrappers](https://github.com/reagle/pandoc-wrappers) by Joseph Reagle (GPLv3-licensed).
 
