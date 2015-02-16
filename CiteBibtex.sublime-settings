@@ -21,6 +21,11 @@
 
     "autodetect_citation_style": true,
 
+    // Additional fields to make searchable when displaying the quick panel
+    // (the citekey is always searched and displayed first)
+
+    "additional_search_fields": [],
+
     // !!
     // The remainder of the settings below
     // cannot be overridden on a per-project basis

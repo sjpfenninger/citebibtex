@@ -8,44 +8,6 @@ from .lib.bibtexparser import customization
 from .lib import md2bib
 
 
-def get_item(i):
-    # Year
-    try:
-        year = i['year']
-    except KeyError:
-        year = '<no date>'
-
-    # Authors
-    try:
-        authors = i['author']
-        # authors is a list of 'last, first' strings, we only want
-        # the last names here
-        authors = ', '.join([a.split(',',)[0] for a in authors])
-    except KeyError:
-        authors = '<no authors>'
-
-    # Title
-    try:
-        title = i['title']
-    except KeyError:
-        title = ''
-
-    # Publication
-    if 'journal' in i:
-        publication = i['journal']
-        if 'volume' in i:
-            publication = publication + ' (' + i['volume'] + ')'
-        if 'number' in i:
-            publication = publication + ' ' + i['number']
-    else:
-        try:
-            publication = i['booktitle']
-        except KeyError:
-            publication = i['ENTRYTYPE'].capitalize()
-
-    return [i['ID'], year + ' | ' + authors, title, publication]
-
-
 class CiteBibtex(object):
     def plugin_loaded_setup(self):
         ##
@@ -59,6 +21,7 @@ class CiteBibtex(object):
         global_file = self.plugin_settings.get('bibtex_file')
         self.last_modified = {}
         self.refs = {}
+        self.ref_keys = {}
         _ = self.check_modified(global_file)
         self.update_refs(global_file)
 
@@ -114,6 +77,68 @@ class CiteBibtex(object):
             else:
                 return False
 
+    def get_item(self, i):
+        # Year
+        try:
+            year = i['year']
+        except KeyError:
+            try:
+                year = i['issued']
+            except KeyError:
+                year = '<no date>'
+
+        # Authors
+        try:
+            authors = i['author']
+            # authors is a list of 'last, first' strings, we only want
+            # the last names here
+            authors = ', '.join([a.split(',',)[0] for a in authors])
+        except KeyError:
+            authors = '<no authors>'
+
+        # Title
+        try:
+            title = publication = i['title']
+        except KeyError:
+            title = ''
+
+        # Publication
+        if 'journal' in i or 'journaltitle' in i:
+            if 'journal' in i:
+                publication = i['journal']
+            else:
+                publication = i['journaltitle']
+            if 'volume' in i:
+                publication = publication + ' (' + i['volume'] + ')'
+            if 'number' in i:
+                publication = publication + ' ' + i['number']
+        else:
+            if publication == title:
+                try:
+                    publication = i['institution']
+                except KeyError:
+                    try:
+                        publication = i['booktitle']
+                    except KeyError:
+                        publication = i['ENTRYTYPE'].capitalize()
+
+        # Set search key
+        search_key = i['ID']
+        additional_search_fields = self.get_setting('additional_search_fields')
+        if additional_search_fields:
+            search_key += ' | '
+            for field in additional_search_fields:
+                try:
+                    if isinstance(i[field], list):
+                        result = ', '.join(i[field])
+                    else:
+                        result = i[field]
+                    search_key += result + ' | '
+                except KeyError:
+                    pass
+
+        return [search_key, year + ' | ' + authors, title, publication]
+
     def update_refs(self, ref_file):
         encoding = self.get_setting('bibtex_file_encoding')
         parser = BibTexParser()
@@ -125,7 +150,8 @@ class CiteBibtex(object):
         with open(ref_file, 'r', encoding=encoding) as f:
             bib = parser.parse_file(f)
         refs = bib.entries_dict
-        self.refs[ref_file] = [get_item(refs[i]) for i in refs]
+        self.refs[ref_file] = [self.get_item(refs[i]) for i in refs]
+        self.ref_keys[ref_file] = [refs[i]['ID'] for i in refs]
 
     def show_selector(self):
         window = sublime.active_window()
@@ -146,8 +172,7 @@ class CiteBibtex(object):
     def insert_ref(self, refid):
         if refid == -1:  # Don't do anything if nothing was selected
             return None
-        references = self.refs[self.current_ref_source]
-        ref_key = references[refid][0]
+        ref_key = self.ref_keys[self.current_ref_source][refid]
         citation = self.get_citation_style().replace('$CITATION', ref_key)
         view = sublime.active_window().active_view()
         view.run_command('insert_reference', {'reference': citation})
