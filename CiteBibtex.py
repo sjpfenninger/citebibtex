@@ -23,7 +23,8 @@ class CiteBibtex(object):
         self.refs = {}
         self.ref_keys = {}
         _ = self.check_modified(global_file)
-        self.update_refs(global_file)
+        self._update_in_progress = False
+        sublime.set_timeout_async(lambda: self.update_refs(global_file), 0)
 
     def get_setting(self, setting, return_source=False):
         project_data = sublime.active_window().project_data()
@@ -140,6 +141,7 @@ class CiteBibtex(object):
         return [search_key, year + ' | ' + authors, title, publication]
 
     def update_refs(self, ref_file):
+        self._update_in_progress = True
         encoding = self.get_setting('bibtex_file_encoding')
         parser = BibTexParser()
         parser.ignore_nonstandard_types = False
@@ -152,8 +154,20 @@ class CiteBibtex(object):
         refs = bib.entries_dict
         self.refs[ref_file] = [self.get_item(refs[i]) for i in refs]
         self.ref_keys[ref_file] = [refs[i]['ID'] for i in refs]
+        self._update_in_progress = False
+
+    def update_refs_then_show_panel(self, ref_file):
+        window = sublime.active_window()
+        self.update_refs(ref_file)
+        ref_source = self.current_ref_source
+        window.show_quick_panel(self.refs[ref_source], self.insert_ref)
 
     def show_selector(self):
+        # Don't do anything if this is repeatedly called during an update,
+        # until BibTeX file is completely read
+        if self._update_in_progress:
+            return None
+
         window = sublime.active_window()
 
         ref_source, source = self.get_setting('bibtex_file',
@@ -161,13 +175,16 @@ class CiteBibtex(object):
         if source == 'project' and not os.path.isabs(ref_source):
             ref_dir = os.path.dirname(window.project_file_name())
             ref_source = os.path.join(ref_dir, ref_source)
+        self.current_ref_source = ref_source
 
         # Before showing selector, check whether BibTeX file was modified
         # and update it if needed
         if self.check_modified(ref_source):
-            self.update_refs(ref_source)
-        self.current_ref_source = ref_source
-        window.show_quick_panel(self.refs[ref_source], self.insert_ref)
+            sublime.status_message('BibTeX file has changed; reloading.')
+            callback = lambda: self.update_refs_then_show_panel(ref_source)
+            sublime.set_timeout_async(callback, 0)
+        else:
+            window.show_quick_panel(self.refs[ref_source], self.insert_ref)
 
     def insert_ref(self, refid):
         if refid == -1:  # Don't do anything if nothing was selected
