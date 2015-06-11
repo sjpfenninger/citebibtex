@@ -99,7 +99,7 @@ class CiteBibtex(object):
 
         # Title
         try:
-            title = publication = i['title']
+            title = i['title']
         except KeyError:
             title = ''
 
@@ -114,14 +114,14 @@ class CiteBibtex(object):
             if 'number' in i:
                 publication = publication + ' ' + i['number']
         else:
-            if publication == title:
+            try:
+                publication = i['institution']
+            except KeyError:
                 try:
-                    publication = i['institution']
+                    publication = i['booktitle']
                 except KeyError:
-                    try:
-                        publication = i['booktitle']
-                    except KeyError:
-                        publication = i['ENTRYTYPE'].capitalize()
+                    # Final fallback if cannot determine publication
+                    publication = i['ENTRYTYPE'].capitalize()
 
         # Set search key
         search_key = i['ID']
