@@ -1,5 +1,7 @@
 # CiteBibtex
 
+[![Join the chat at https://gitter.im/sjpfenninger/citebibtex](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/sjpfenninger/citebibtex?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 A Sublime Text plugin to effortlessly insert citations from BibTeX into texts written in Pandoc or LaTeX.
 
 ## Installation
