@@ -20,6 +20,7 @@ class CiteBibtex(object):
         ##
         global_file = self.plugin_settings.get('bibtex_file')
         self.last_modified = {}
+        self.refs_dict = {}
         self.refs = {}
         self.ref_keys = {}
         _ = self.check_modified(global_file)
@@ -151,7 +152,7 @@ class CiteBibtex(object):
         parser.customization = customizer
         with open(ref_file, 'r', encoding=encoding) as f:
             bib = parser.parse_file(f)
-        refs = bib.entries_dict
+        self.refs_dict[ref_file] = refs = bib.entries_dict
         self.refs[ref_file] = [self.get_item(refs[i]) for i in refs]
         self.ref_keys[ref_file] = [refs[i]['ID'] for i in refs]
         self._update_in_progress = False
@@ -162,7 +163,11 @@ class CiteBibtex(object):
         ref_source = self.current_ref_source
         window.show_quick_panel(self.refs[ref_source], self.insert_ref)
 
-    def show_selector(self):
+    def show_selector(self, selector_callback=None):
+
+        if selector_callback is None:
+            selector_callback = self.insert_ref
+
         # Don't do anything if this is repeatedly called during an update,
         # until BibTeX file is completely read
         if self._update_in_progress:
@@ -184,7 +189,7 @@ class CiteBibtex(object):
             callback = lambda: self.update_refs_then_show_panel(ref_source)
             sublime.set_timeout_async(callback, 0)
         else:
-            window.show_quick_panel(self.refs[ref_source], self.insert_ref)
+            window.show_quick_panel(self.refs[ref_source], selector_callback)
 
     def insert_ref(self, refid):
         if refid == -1:  # Don't do anything if nothing was selected
@@ -193,6 +198,17 @@ class CiteBibtex(object):
         citation = self.get_citation_style().replace('$CITATION', ref_key)
         view = sublime.active_window().active_view()
         view.run_command('insert_reference', {'reference': citation})
+
+    def insert_citation(self, refid):
+        if refid == -1:  # Don't do anything if nothing was selected
+            return None
+        ref_key = self.ref_keys[self.current_ref_source][refid]
+        ref_dict = self.refs_dict[self.current_ref_source][ref_key].copy()
+        text_fmt = self.get_setting('citation_format_string')
+        ref_dict['author'] = ', '.join(ref_dict['author']).strip()
+        text = text_fmt.format(**ref_dict)
+        view = sublime.active_window().active_view()
+        view.run_command('insert_reference', {'reference': text})
 
     def extract_citations(self):
         """
@@ -212,9 +228,14 @@ class CiteBibtex(object):
         sublime.status_message('Extracted citations to {}'.format(fname))
 
 
-class CiteBibtexShowSelectorCommand(sublime_plugin.ApplicationCommand):
+class CiteBibtexShowReferenceSelectorCommand(sublime_plugin.ApplicationCommand):
     def run(self, **kwargs):
         _sublimebibtex.show_selector()
+
+
+class CiteBibtexShowCitationSelectorCommand(sublime_plugin.ApplicationCommand):
+    def run(self, **kwargs):
+        _sublimebibtex.show_selector(selector_callback=_sublimebibtex.insert_citation)
 
 
 class InsertReferenceCommand(sublime_plugin.TextCommand):
