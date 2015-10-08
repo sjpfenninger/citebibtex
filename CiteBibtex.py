@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 
 import os
+from collections import defaultdict
 
 from .lib.bibtexparser.bparser import BibTexParser
 from .lib.bibtexparser import customization
@@ -203,8 +204,12 @@ class CiteBibtex(object):
         if refid == -1:  # Don't do anything if nothing was selected
             return None
         ref_key = self.ref_keys[self.current_ref_source][refid]
-        ref_dict = self.refs_dict[self.current_ref_source][ref_key].copy()
+        # Use defaultdict to prevent errors in format string
+        # due to missing keys, simply filing them with empty strings
+        ref_dict = defaultdict(lambda: '',
+                               self.refs_dict[self.current_ref_source][ref_key].copy())
         text_fmt = self.get_setting('citation_format_string')
+        # Concatenate all authors into one string
         ref_dict['author'] = ', '.join(ref_dict['author']).strip()
         text = text_fmt.format(**ref_dict)
         view = sublime.active_window().active_view()
