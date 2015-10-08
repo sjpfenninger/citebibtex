@@ -207,8 +207,7 @@ class CiteBibtex(object):
         bibsubset_file = basefile + '.bib'
         bibtex_file = self.plugin_settings.get('bibtex_file')
         md2bib.extract_bibliography(current_file, bibtex_file,
-                                    bibsubset_file,
-                                    include_bibtex_style=True)
+                                    bibsubset_file)
         _, fname = os.path.split(bibsubset_file)
         sublime.status_message('Extracted citations to {}'.format(fname))
 

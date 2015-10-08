@@ -14,6 +14,9 @@ import logging
 import re
 
 
+BIBKEY_PAT = '([.:;,\-\w]+)'
+
+
 def parse_bibtex(text):
     """Return a dictionary of entry dictionaries, each with a field/value.
     The parser is simple/fast *and* inflexible, unlike the proper but
@@ -21,7 +24,7 @@ def parse_bibtex(text):
 
     """
     entries = OrderedDict()
-    key_pat = re.compile('@(\w+){(.*),')
+    key_pat = re.compile('@' + BIBKEY_PAT + '\{(.*),')
     value_pat = re.compile('[\s]*(\w+)[\s]*=[\s]*{(.*)},?')
     for line in text:
         key_match = key_pat.match(line)
@@ -64,22 +67,46 @@ def subset_bibliography(entries, keys):
     return subset
 
 
-def get_keys_from_document(filename, include_bibtex_style=False):
+def get_keys_from_document(filename):
     """Return a list of keys used in filename by looking for citations
     like `@citekey`.
 
-    If include_bibtex_style=True, also look for citations in the
+    Also look for citations in the
     `\cite*{key}` style, where `*` can be any character or none.
 
     """
+    k_md = '\[@' + BIBKEY_PAT + '\]|(?<!\[)@' + BIBKEY_PAT
+    k_latex = '\\cite.?\[?(?:.+?)?\]?\{' + BIBKEY_PAT + '\}'
+
     text = open(filename, 'r', encoding='utf-8').read()
-    finds = re.findall('@(.*?)[\.,:;\] ]', text)
-    finds += re.findall('\\cite.?\[?(?:.+?)?\]?\{(.+?)\}', text)
-    return finds
+    md = re.findall(k_md, text)
+    md_brackets, md_intext = list(zip(*md))
+    md_brackets, md_intext = list(md_brackets), list(md_intext)
+
+    matches = []
+    # Split up finds if necessary to deal with [@key0; @key1]
+    for f in md_brackets:
+        if '@' in f:
+            sub_f = f.replace(' ', '').replace('@', '').split(';')
+            matches.extend(sub_f)
+        elif f != '':
+            matches.append(f)
+
+    matches.extend([i for i in md_intext if i != ''])
+
+    latex = re.findall(k_latex, text)
+    for f in latex:
+        if ',' in f:
+            sub_f = [i.strip() for i in f.split(',')]
+            matches.extend(sub_f)
+        elif f != '':
+            matches.append(f)
+
+    logging.debug('Found keys in document: ' + ', '.join(matches))
+    return matches
 
 
-def extract_bibliography(source_doc, source_bib, target_bib,
-                         include_bibtex_style=False):
+def extract_bibliography(source_doc, source_bib, target_bib):
     # Extract citation keys from source file
     keys = get_keys_from_document(source_doc)
     # Read source bibliography and generate subset
