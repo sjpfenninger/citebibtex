@@ -33,6 +33,10 @@ The `bibtex_file` setting can be overridden on a per-project basis in the projec
 }
 ```
 
+## Inserting plaintext bibliography entries
+
+There is a separate command (bound to `F9` by default) to insert a pre-formatted plaintext bibliography entry rather than a citation key. This is configured via the new `citation_format_string` setting in the plugin settings, which is a Python format string, set to `"{author} ({year}). {title}"` by default. Any BibTeX field can be used in the format string, missing ones will be replaced with an empty string.
+
 ## Extraction of citations from master BibTeX file
 
 The command `CiteBibTeX: Extract citations in current file` is available via the command palette, and will extract all references used in the currently open file from the global BibTeX file, saving that subset in a local BibTeX file.
