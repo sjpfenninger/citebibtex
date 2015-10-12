@@ -46,5 +46,7 @@
     // Backslash needs to be escaped
 
     "styles": {"pandoc": "[@$CITATION]",
-               "latex": "\\citep{$CITATION}"}
+               "latex": "\\citep{$CITATION}"},
+
+    "citation_format_string": "{author} ({year}). {title}"
 }
