@@ -10,6 +10,10 @@ from .lib import md2bib
 
 
 class CiteBibtex(object):
+
+    def __init__(self):
+        self._update_in_progress = False
+    
     def plugin_loaded_setup(self):
         ##
         # Load settings
