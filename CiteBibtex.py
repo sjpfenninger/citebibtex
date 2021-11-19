@@ -19,24 +19,29 @@ class CiteBibtex(object):
         ##
         # Initialize and load global references
         ##
-        global_file = self.plugin_settings.get('bibtex_file')
+        ref_source, source = self.get_setting('bibtex_file',
+                                              return_source=True)
+                                              
         self.last_modified = {}
         self.refs_dict = {}
         self.refs = {}
         self.ref_keys = {}
-        _ = self.check_modified(global_file)
+        _ = self.check_modified(ref_source)
         self._update_in_progress = False
-        sublime.set_timeout_async(lambda: self.update_refs(global_file), 0)
+        sublime.set_timeout_async(lambda: self.update_refs(ref_source), 0)
 
     def get_setting(self, setting, return_source=False):
         project_data = sublime.active_window().project_data()
         # Check whether there is a project-specific override
         if project_data and setting in project_data:
-            result = project_data[setting]
+            window = sublime.active_window()
+            ref_dir = os.path.dirname(window.project_file_name())
+            result = ref_dir + '/' + project_data[setting]
             source = 'project'
         else:
             result = self.plugin_settings.get(setting)
             source = 'global'
+            
         if return_source:
             return (result, source)
         else:
@@ -226,7 +231,9 @@ class CiteBibtex(object):
         # split off extension
         basefile, extension = os.path.splitext(current_file)
         bibsubset_file = basefile + '.bib'
-        bibtex_file = self.plugin_settings.get('bibtex_file')
+        bibtex_file, source = self.get_setting('bibtex_file',
+                                              return_source=True)
+       
         md2bib.extract_bibliography(current_file, bibtex_file,
                                     bibsubset_file)
         _, fname = os.path.split(bibsubset_file)
