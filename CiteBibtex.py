@@ -211,6 +211,7 @@ class CiteBibtex(object):
         text_fmt = self.get_setting('citation_format_string')
         # Concatenate all authors into one string
         ref_dict['author'] = ', '.join(ref_dict['author']).strip()
+        ref_dict['citation'] = ref_key
         text = text_fmt.format(**ref_dict)
         view = sublime.active_window().active_view()
         view.run_command('insert_reference', {'reference': text})
